@@ -1,0 +1,747 @@
+/*
+* EE422C Final Project submission by
+* Replace <...> with your actual data.
+* <Gavin Nguyen>
+* <GPN235>
+* <17180>
+* Spring 2023
+*/
+
+package finalproject;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.math.BigInteger;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Observable;
+import java.util.stream.Collectors;
+
+import com.google.gson.Gson;
+import org.bson.BsonDocument;
+import org.bson.BsonInt64;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+import com.mongodb.MongoException;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
+public class Server {
+	static int online =0;
+	private static final String URI =
+	"mongodb+srv://gavinnguyen18:gOCf4E65v2YwN3Rs@cluster0.envn2jv.mongodb.net/?retryWrites=true&w=majority";
+	private static MongoClient mongo;
+	private static MongoDatabase database;
+	private static MongoCollection<Document> collection;
+	PrintWriter writer;
+	private static final String DB = "FinalProject";
+	private static final String COLLECTION = "Logins";
+	public static Socket sock;
+	public static HashMap<Integer, Thread> ThreadMap = new HashMap();
+	private List<PrintWriter> clientOutputStreams;
+	static int count = 0;
+	static Socket clientsock;
+	public static void main(String[] args) {
+	mongo = MongoClients.create(URI);
+	database = mongo.getDatabase(DB);
+	collection = database.getCollection(COLLECTION);
+
+	ping();
+	
+	try {
+		new Server().setUpNetworking();
+	} catch (Exception e) {
+		e.printStackTrace();
+	}
+	}
+private void setUpNetworking() throws Exception, SocketException {
+	clientOutputStreams = new ArrayList<PrintWriter>();
+	@SuppressWarnings("resource")
+		ServerSocket serverSock = new ServerSocket(1717);
+
+		while (true) {
+			
+			Socket clientSocket = serverSock.accept();
+			PrintWriter writer = new PrintWriter(clientSocket.getOutputStream());
+			clientOutputStreams.add(writer);
+			
+			Thread t = new Thread(new ClientHandler(clientSocket));
+			
+			ThreadMap.put(online,t);
+			t.start();
+			
+			System.out.println("got a connection");
+			
+		}
+	}
+private void notifyClients(String message)  {
+	for (PrintWriter writer : clientOutputStreams) {
+		writer.println(message);
+		writer.flush();
+	}
+	}
+class ClientHandler implements Runnable {
+	private BufferedReader reader;
+	public ClientHandler(Socket clientSocket) throws IOException {
+		 sock = clientSocket;
+		 clientsock = clientSocket;
+		reader = new BufferedReader(new
+				InputStreamReader(sock.getInputStream()));
+	}
+	public void run() {
+		
+		String message;
+		
+		try {
+			while ((message = reader.readLine()) != null) {
+				if(message.compareTo("Sign-up")==0) {
+					Signup();
+					
+				}
+				else if(message.compareTo("Sign-in")==0) {
+					Signin();
+				}
+				else if(message.compareTo("AllItems")==0) {
+					AllItems();
+				}
+				else if(message.contains("PreviewPage")) {
+					PreviewPage(message);
+				}
+				else if(message.contains("CheckOut")) {
+					CheckOut(message);
+			}
+				else if(message.contains("MyStuff")) {
+					MyStuff(message);
+				}
+				else if(message.contains("Return")) {
+					Return(message);
+				}
+				else if(message.contains("IsIt")) {
+					IsIt(message);
+				}
+				else if(message.contains("LogOff")) {
+					LogOff(message);
+				}
+				else if(message.contains("HoldPls")) {
+					Holding(message);
+				}
+				else if(message.contains("IsAdmin")) {
+					Admin(message);
+				}
+				else if(message.contains("Create")) {
+					try {
+						CreateItem(message);
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				else if(message.contains("GetReviews")) {
+					GetReviews(message);
+				}
+				else if(message.contains("Post")) {
+					try {
+						Post(message);
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				
+				}
+				else if (message.contains("GetUsers")) {
+					GetUsers();
+				}
+				else if (message.contains("MakeNewAdmin")) {
+					MakeNewAdmin(message);
+				}
+				else if (message.contains("GrabAvatar")) {
+					GrabAvatar(message);
+			}
+				else if(message.contains("AvatarChange")) {
+					AvatarChange(message);
+				}
+				else if(message.contains("Search")) {
+					Search(message);
+				}
+			}
+			}catch(SocketException i){
+				
+			}
+			catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			
+		}
+		
+		
+		}
+	private void Search(String message) throws IOException {
+		// TODO Auto-generated method stub
+		collection = database.getCollection("AllItems");
+		ArrayList<String> List = new ArrayList();
+		FindIterable<Document> docs=collection.find();
+		message= message.replace("Search-Title: ","");
+		message= message.replace("Search-","");
+		for(Document doc: docs) {
+			String title=doc.getString("-Title");
+			if(title.toLowerCase().contains(message.toLowerCase())) {
+				List.add(doc.toString());
+			}
+			
+		}
+		ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+		objectOutput.writeObject(List);
+		objectOutput.flush();
+	}
+	}
+@SuppressWarnings("deprecation")
+synchronized void Signup() {
+	try {
+		//ServerSocket serverSock = new ServerSocket(1717);
+		final String DB = "FinalProject";
+		final String COLLECTION = "Logins";
+		collection = database.getCollection(COLLECTION);
+		FileInputStream fileStream = new FileInputStream("signup.txt");
+        ObjectInputStream input = new ObjectInputStream(fileStream);
+        
+        
+        
+        try {
+			//System.out.println(input.readObject());
+			String str= input.readObject().toString();
+			String[] parts = str.split("=", 2);
+			String string1 = parts[0];
+			String string2 = parts[1];
+			String str1=string1.replace("{","");
+			String str2=string2.replace("}","");
+			str2=encryptPassword(str2);
+			
+			
+			Document id = collection.find(Filters.eq("Username", str1)).first();
+			if(id==null) {
+			Document doc = new Document();
+			doc.put("Username", str1);
+			doc.put("Password", str2);
+			ArrayList<String> Check = new ArrayList();
+			doc.put("Checked-Out", Check);
+			doc.put("Status", "Online");
+			doc.put("Role","Student");
+			doc.put("Avatar","https://thumbs.dreamstime.com/b/default-avatar-profile-vector-user-profile-default-avatar-profile-vector-user-profile-profile-179376714.jpg");
+			System.out.println("New User");
+			collection.insertOne(doc);
+			online++;
+			System.out.println("Number of People Online: " + online);
+				 FileOutputStream file;
+				 PrintWriter writer = new PrintWriter(sock.getOutputStream());
+					//clientOutputStreams.add(writer);
+					writer.println("Continue");
+					writer.flush();
+			}
+			else {
+				System.out.println("Already Exist");
+				PrintWriter writer = new PrintWriter(sock.getOutputStream());
+				//clientOutputStreams.add(writer);
+				writer.println("Unavaliable");
+				writer.flush();
+			}
+					
+			
+			input.close();
+			File signupfile = new File("signup.txt");
+			if (signupfile.delete()) { 
+			      System.out.println("Deleted the file: " + signupfile.getName());
+			    } else {
+			      System.out.println("Failed to delete the file.");
+			    } 
+
+		} 
+        catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+}
+void Signin() throws IOException {
+	final String COLLECTION = "Logins";
+	collection = database.getCollection(COLLECTION);
+	FileInputStream fileStream = new FileInputStream("signin.txt");
+    ObjectInputStream input = new ObjectInputStream(fileStream);
+    
+    
+    
+    try {
+		//System.out.println(input.readObject());
+		String str= input.readObject().toString();
+		String[] parts = str.split("=", 2);
+		String string1 = parts[0];
+		String string2 = parts[1];
+		String str1=string1.replace("{","");
+		String str2=string2.replace("}","");
+		str2=encryptPassword(str2);
+		
+		
+		Document id = collection.find(Filters.eq("Username", str1)).first();
+		if(id==null) {
+		PrintWriter writer = new PrintWriter(sock.getOutputStream());
+		//clientOutputStreams.add(writer);
+		writer.println("Invalid");
+		writer.flush();}
+		else if(id.containsValue(str2)) {
+			if(id.containsValue("Online")) {
+				PrintWriter writer = new PrintWriter(sock.getOutputStream());
+				writer.println("AlreadyOn");
+				writer.flush();
+			}
+			else {
+			
+			collection.updateOne(Filters.eq("Username", str1),Updates.set("Status","Online"));
+			PrintWriter writer = new PrintWriter(sock.getOutputStream());
+			online++;
+			System.out.println("Number of People Online: " + online);
+			writer.println("Valid");
+			writer.flush();
+			}
+		}
+		else if (!id.containsValue(str2)){
+			PrintWriter writer = new PrintWriter(sock.getOutputStream());
+			//clientOutputStreams.add(writer);
+			writer.println("Invalid");
+			writer.flush();
+		};
+		input.close();
+		File signinfile = new File("signin.txt");
+		if (signinfile.delete()) { 
+		      System.out.println("Deleted the file: " + signinfile.getName());
+		    } else {
+		      System.out.println("Failed to delete the file.");
+		    } 
+
+	} 
+    catch (ClassNotFoundException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}		
+		
+		
+	
+
+}
+public static void AllItems() throws IOException {
+	
+	ArrayList<String[]> BookArray = new ArrayList();
+	int index = 0;
+	int flag=1;
+	collection = database.getCollection("AllItems");
+	MongoCursor cursor = collection.find().cursor();
+	while (cursor.hasNext()) {
+		
+		String str = cursor.next().toString();
+		String[] parts = str.split("-",10);
+
+		String part2 = parts[8]; 
+		part2 = part2.replace("=",":");
+		part2 = part2.replace(",","");
+		
+		String part3 = parts[1]; 
+		part3 = part3.replace("=",":");
+		part3 = part3.replace(",","");
+		
+		String part4 = parts[3]; 
+		part4 = part4.replace("=",":");
+		part4 = part4.replace(",","");
+		
+		String part5 = parts[5]; 
+		part5 = part5.replace("=",":");
+		part5 = part5.replace(",","");
+	
+		String part6 = parts[7];
+		part6 = part6.replace("=",":");
+		part6 = part6.replace(",","");
+		part2 = part2.replace("}","");
+		
+		String[] arr = new String[] {part2,part3,part4,part5,part6};
+		BookArray.add(index,arr);
+		index++;
+		}
+	ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+	objectOutput.writeObject(BookArray);
+	objectOutput.flush();
+}
+public void PreviewPage(String message) throws IOException {
+	collection = database.getCollection("AllItems");
+	String[] str = message.split("-",2);
+	String Title = str[1];
+	str=Title.split(": ",2);
+	Title = str[1];
+	Document id = collection.find(Filters.eq("-Title", Title)).first();
+	if(id!=null) {
+	String str2 = id.toString();
+	String[] parts = str2.split("-");
+	//id
+	String part1 = parts[0]; 
+	part1 = part1.replace("=",":");
+	part1 = part1.replace(",","");
+	//Author
+	String part2 = parts[1]; 
+	part2 = part2.replace("=",":");
+	part2 = part2.replace(",","");
+	//Description
+	String part3 = parts[2]; 
+	part3 = part3.replace("=",":");
+	part3 = part3.replace(",","");
+	//Genre
+	String part4 = parts[3]; 
+	part4 = part4.replace("=",":");
+	part4 = part4.replace(",","");
+	//Review
+	String part5 = parts[5]; 
+	part5 = part5.replace("=",":");
+	part5 = part5.replace(",","");
+	//Status
+	String part6 = parts[7]; 
+	part6 = part6.replace("=",":");
+	part6 = part6.replace(",","");
+	
+	//Title
+	String part7 = parts[8];
+	part7 = part7.replace("=",":");
+	part7 = part7.replace(",","");
+	part7 = part7.replace("}","");
+//	//Type
+	String part8 = parts[4];
+	part8 = part8.replace("=",":");
+	part8 = part8.replace(",","");
+
+	String[] arr = new String[] {part7,part2,part3,part4,part5,part6,part8};
+	
+	ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+	objectOutput.writeObject(arr);
+	objectOutput.flush();
+	}
+	else {
+		String[] arr = new String[] {};
+		ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+		objectOutput.writeObject(arr);
+		objectOutput.flush();
+	}
+	}
+public static void CheckOut(String message){
+	collection = database.getCollection("AllItems");
+	String[] str = message.split("-",3);
+	str[1] = str[1].replace("Title: ","");
+	str[2] = str[2].replace(" ","");
+	collection.updateOne(Filters.eq("-Title", str[1]),Updates.set("-Status", "Unavaliable, Owner: " + str[2]));
+	collection = database.getCollection("Logins");
+	Document id = collection.find(Filters.eq("Username", str[2])).first();
+	ArrayList<String> Check = new ArrayList();
+	Object obj = id.get("Checked-Out");
+	Check =  (ArrayList<String>) obj;
+	Check.add(str[1]);
+	collection.updateOne(Filters.eq("Username", str[2]),Updates.set("Checked-Out",Check));
+	
+}
+
+public static void MyStuff(String message) throws IOException {
+	collection = database.getCollection("Logins");
+	String[] str = message.split("-",2);
+	String part = str[1];
+	Document id = collection.find(Filters.eq("Username", str[1])).first();
+	ArrayList<String> Stuff = new ArrayList();
+	Object obj = id.get("Checked-Out");
+	Stuff= (ArrayList<String>) obj;
+	ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+	objectOutput.writeObject(Stuff);
+	objectOutput.flush();
+}
+public static void AvatarChange(String message) {
+	collection = database.getCollection("Logins");
+	String[] str = message.split("=",3);
+	collection.updateOne(Filters.eq("Username", str[1]),Updates.set("Avatar",str[2]));
+}
+public static void Return(String message) {
+	collection = database.getCollection("Logins");
+	String[] str = message.split("-",3);
+	String name = str[2];
+	String title = str[1];
+	String Holds=CheckHoldings(title,name);
+	collection = database.getCollection("Logins");
+	Document id = collection.find(Filters.eq("Username", name)).first();
+	ArrayList<String> Check = new ArrayList();
+	Object obj = id.get("Checked-Out");
+	Check =  (ArrayList<String>) obj;
+	Check.remove(title);
+	collection.updateOne(Filters.eq("Username", name),Updates.set("Checked-Out",Check));
+	collection = database.getCollection("AllItems");
+	collection.updateOne(Filters.eq("-Title", title),Updates.set("-Status", "Available"));
+	if(Holds.contains("true")) {
+		Holds=Holds.replace("true","");
+		CheckOut("CheckOut-"+title+ "-"+Holds);
+	}
+}
+synchronized public static void IsIt(String message) throws IOException{
+	Object obj;
+	String str = message.replace("IsIt ","");
+	collection = database.getCollection("AllItems");
+	Document id = collection.find(Filters.eq("-Title", str)).first();
+	 
+	 obj = id.get("-Status");
+	
+	str =(String) obj;
+	PrintWriter writer = new PrintWriter(sock.getOutputStream());
+	try {
+			writer=new PrintWriter(sock.getOutputStream());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	if(str.contains("Available")) {
+		writer.println("Available");
+	}
+	else {
+		writer.println("Not Avaliable");
+	}
+		writer.flush();
+		}
+	public static void LogOff(String message) throws IOException, SocketException{
+		collection = database.getCollection("Logins");
+		String str1=message.replace("LogOff","");
+		collection.updateOne(Filters.eq("Username", str1),Updates.set("Status","Offline"));
+		online--;
+		System.out.println("Number of People Online: " + online);
+	}
+	public static String encryptPassword(String input)
+    {
+        try {
+            // getInstance() method is called with algorithm SHA-512
+        	SecureRandom random = new SecureRandom();
+        	byte[] salt = new byte[16];
+        	random.nextBytes(salt);
+            MessageDigest md = MessageDigest.getInstance("SHA-512"); 
+            byte[] messageDigest = md.digest(input.getBytes());
+            BigInteger no = new BigInteger(1, messageDigest);
+            String hashtext = no.toString(16);
+            while (hashtext.length() < 32) {
+                hashtext = "0" + hashtext;
+            }
+            return hashtext;
+        }
+        catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+	public static void Holding(String message) throws IOException {
+		String str = message.replace("HoldPlsTitle: ","");
+		String[] stringparts = str.split("-",2);
+		String Book = stringparts[0];
+		String Username = stringparts[1];
+		collection = database.getCollection("Holds");
+		Document id = collection.find(Filters.eq("Username", Username)).first();
+		
+			if(id!=null) {
+				PrintWriter writer = new PrintWriter(sock.getOutputStream());
+				try {
+		  			writer=new PrintWriter(sock.getOutputStream());
+		  		} catch (IOException e) {
+		  			e.printStackTrace();
+		  		}
+				writer.println("AlreadyHeld");
+				
+		  		writer.flush();
+		  		}
+			
+				
+			else {
+		Document doc = new Document();
+		doc.put("Username",Username);
+		doc.put("Book",Book);
+		collection.insertOne(doc);
+		PrintWriter writer = new PrintWriter(sock.getOutputStream());
+		try {
+  			writer=new PrintWriter(sock.getOutputStream());
+  		} catch (IOException e) {
+  			e.printStackTrace();
+  		}
+		writer.println("Held");
+		
+  		writer.flush();
+  		}
+	
+	}
+	public static String CheckHoldings(String Title, String User){
+		collection = database.getCollection("Holds");
+		Document id = collection.find(Filters.eq("Book", Title)).first();
+		
+		if(id!=null) {
+			collection.deleteOne(id);
+			String name = id.get("Username").toString();
+		return "true"+name;
+		}
+		return "false";
+	}
+	public static void Admin(String message) throws IOException {
+		String str = message.replace("IsAdmin-","");
+		Document id = collection.find(Filters.eq("Username", str)).first();
+		if(id.get("Role").toString().contains("Admin")) {
+			PrintWriter writer = new PrintWriter(sock.getOutputStream());
+			try {
+	  			writer=new PrintWriter(sock.getOutputStream());
+	  		} catch (IOException e) {
+	  			e.printStackTrace();
+	  		}
+			writer.println("IsAdmin");
+			
+	  		writer.flush();
+	  		}
+		else {
+			PrintWriter writer = new PrintWriter(sock.getOutputStream());
+			try {
+	  			writer=new PrintWriter(sock.getOutputStream());
+	  		} catch (IOException e) {
+	  			e.printStackTrace();
+	  		}
+			writer.println("Student");
+			
+	  		writer.flush();
+	  		}
+		
+		
+	}
+	public static void CreateItem(String message) throws IOException, ClassNotFoundException {
+		
+		FileInputStream fileStream = new FileInputStream("stringfile.txt");
+        ObjectInputStream input = new ObjectInputStream(fileStream);
+        String string =  input.readObject().toString();
+		
+		input.close();
+		File signupfile = new File("signup.txt");
+		if (signupfile.delete()) { 
+		      System.out.println("Deleted the file: " + signupfile.getName());
+		    } else {
+		      System.out.println("Failed to delete the file.");
+		    } 
+	
+		collection = database.getCollection("AllItems");
+		Document doc = new Document();
+		ArrayList<String> Reviews = new ArrayList();
+		String[]  str = string.split("~",7); 
+		doc.put("-Author", str[1]);
+		doc.put("-Description", str[2]);
+		doc.put("-Genre", str[3]);
+		doc.put("-ImageLink", str[6]);
+		doc.put("-Media", str[4]);
+		doc.put("-Review", Reviews);
+		doc.put("-Status", "Available");
+		doc.put("-Title", str[5]);
+
+		collection.insertOne(doc);
+	}
+	public static void GetReviews(String message) throws IOException {
+		String[] str = message.split("-",2);
+		collection = database.getCollection("AllItems");
+		Document id = collection.find(Filters.eq("-Title", str[1].replace("Title: ", ""))).first();
+		ArrayList<String> Reviews = new ArrayList();
+		Object obj = id.get("-Review");
+		Reviews = (ArrayList<String>) obj;
+		ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+		objectOutput.writeObject(Reviews);
+		objectOutput.flush();
+	}
+	public static void Post(String message) throws IOException, ClassNotFoundException{
+		ArrayList<String> arr = new ArrayList();
+		message = message.replace("Post-","");
+		String[] str = message.split("-",2);
+		collection = database.getCollection("AllItems");
+		Document id = collection.find(Filters.eq("-Title", str[0].replace("Title: ", ""))).first();
+		Object obj = id.get("-Review");
+		FileInputStream fileStream = new FileInputStream("temp.txt");
+        ObjectInputStream input = new ObjectInputStream(fileStream);
+        String Posts = input.readObject().toString();
+        String Title = str[0].replace("Title: ","");
+		arr = (ArrayList<String>) obj;
+		arr.add(str[1]+"\n"+Posts);
+		collection.updateOne(Filters.eq("-Title", Title),Updates.set("-Review",arr));
+		input.close();
+		File txtfile = new File("temp.txt");
+		if (txtfile.delete()) { 
+		      System.out.println("Deleted the file: " + txtfile.getName());
+		    } else {
+		      System.out.println("Failed to delete the file.");
+		    } 
+	
+
+	} 
+	
+	public static void GetUsers() throws IOException {
+		ArrayList<String> NameArray = new ArrayList();
+		collection = database.getCollection("Logins");
+		MongoCursor cursor = collection.find().cursor();
+		while (cursor.hasNext()) {
+			
+			String str = cursor.next().toString();
+			String[] parts = str.split(",",6);
+			 
+			NameArray.add(parts[1].replace(" Username=",""));
+			}
+		ObjectOutputStream objectOutput = new ObjectOutputStream(sock.getOutputStream());
+		objectOutput.writeObject(NameArray);
+		objectOutput.flush();
+	}
+	public static void MakeNewAdmin(String Name) {
+		Name = Name.replace("MakeNewAdmin-","");
+		collection = database.getCollection("Logins");
+		collection.updateOne(Filters.eq("Username", Name),Updates.set("Role","Admin"));
+	}
+	public static void GrabAvatar(String message) {
+		String[] str = message.split("=",2);
+		collection = database.getCollection("Logins");
+		Document id = collection.find(Filters.eq("Username", str[1])).first();
+		message = id.get("Avatar").toString();
+		PrintWriter writer = null;
+		try {
+ 			writer=new PrintWriter(sock.getOutputStream());
+ 		} catch (IOException e) {
+ 			e.printStackTrace();
+ 		}
+ 		writer.println(message);
+ 		writer.flush();
+ 		
+	
+	}
+public static void ping() {
+	try {
+	Bson command = new BsonDocument("ping", new BsonInt64(1));
+	Document commandResult = database.runCommand(command);
+	System.out.println("Connected successfully to server.");
+	} catch (MongoException me) {
+	System.err.println("An error occurred while attempting to run a command: " + me);
+	}
+	}
+
+
+}
+
+
+

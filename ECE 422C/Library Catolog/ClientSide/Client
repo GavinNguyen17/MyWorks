@@ -1,0 +1,1817 @@
+/*
+* EE422C Final Project submission by
+* Replace <...> with your actual data.
+* <Gavin Nguyen>
+* <GPN235>
+* <17180>
+* Spring 2023
+*/
+
+package Client;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.ResourceBundle;
+import java.util.Scanner;
+
+import javax.swing.text.Document;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.URL;
+import java.net.UnknownHostException;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import javafx.animation.PauseTransition;
+import javafx.animation.TranslateTransition;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.ScrollBar;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.ImageViewBuilder;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.media.AudioClip;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
+import javafx.util.Duration;
+
+import java.io.ObjectOutputStream;
+
+public class Client extends Application{
+
+//School Host
+//private static String host = "10.145.43.181";
+//Home Host
+private static String host = null;	
+static Color BURNT = Color.rgb(204,85,0);
+private BufferedReader reader;
+private static PrintWriter writer;
+private TextField outgoing;
+@Override
+public void start(Stage applicationStage) {
+	
+		Stage stage = new Stage();
+		
+		stage.setTitle("Enter IP");
+        VBox vbox = new VBox();
+        Label label = new Label("Enter IP Address:");
+        TextField Address=new TextField();
+        Button Submit = new Button("Submit");
+        Submit.setOnAction((ActionEvent event) -> {
+    		host=Address.getText();
+    		stage.close();
+    		if(host!=null) {
+    			   Signinpage(applicationStage);
+    				
+    				try {
+    					setUpNetworking();
+    					} catch (IOException ex) {
+    					}
+    					}
+    	});
+        vbox.getChildren().addAll(label,Address,Submit);
+        Scene scene = new Scene(vbox, 200, 100);
+        stage.setScene(scene);
+        stage.show();
+	
+}
+
+
+private void setUpNetworking() throws IOException {
+	
+	
+	@SuppressWarnings("resource")
+	Socket sock = new Socket(host, 1717);
+	
+	InputStreamReader streamReader = new InputStreamReader(sock.getInputStream());
+	reader = new BufferedReader(streamReader);
+	writer = new PrintWriter(sock.getOutputStream());
+	
+	Thread readerThread = new Thread(new Runnable() {
+	@Override
+	public void run() {
+	String input;
+	try {
+	while ((input = reader.readLine()) != null) {
+		System.out.println("From server: " + input);
+		processRequest(input);
+	}
+	} catch (Exception e) {
+	e.printStackTrace();
+	}
+	
+	}
+	});
+	
+	
+	readerThread.start();
+	System.out.println("networking established");
+	}
+
+public static void HomePage( String Username) {
+    // TODO: Implement this method
+	Color BURNT = Color.rgb(204,85,0);
+	
+	Stage HomePage = new Stage();
+	HomePage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+        @Override
+        public void handle(WindowEvent e) {
+        	 LogOff(Username);
+        }
+      });
+	
+	
+	VBox vbox1=new VBox();
+	
+	GridPane grid = new GridPane();
+	
+	HomePage.setResizable(false);
+	
+	Rectangle ClearRect = new Rectangle();
+	ClearRect.setFill(Color.TRANSPARENT);
+	ClearRect.setWidth(410);
+	ClearRect.setHeight(150);
+	Label Search= new Label("                                    Search:");
+	Search.setTextFill(Color.WHITE);
+	//Search.setStyle("-fx-font-weight: bold");
+	Search.setFont(new Font("Arial",15));
+	TextField SearchBar = new TextField();
+	
+	SearchBar.setPrefWidth(300);
+	Button SearchButton = new Button("Search");
+	Rectangle OrangeRectangle = new Rectangle();
+	OrangeRectangle.setFill(BURNT);
+	OrangeRectangle.setWidth(410);
+	OrangeRectangle.setHeight(94);
+	Button Userbutton = new Button();
+	Button AllItems = new Button("All Items");
+	AllItems.setOnAction((ActionEvent event) -> {
+		try {
+			HomePage.close();
+			AllBookPage(Username);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    
+	});
+	Button homebutton = new Button();
+	homebutton.setOnAction((ActionEvent event) -> {
+		HomePage.close();
+		HomePage(Username);
+	    
+	});
+	Userbutton.setOnAction((ActionEvent event) -> {
+		
+		UserPage(Username);
+	    
+	});
+	Userbutton.setStyle("-fx-background-color: #CC5500");
+	Userbutton.setPrefSize(80, 94);
+	AllItems.setStyle("-fx-background-color: #CC5500");
+	AllItems.setPrefSize(80, 94);
+	Image homeimage = new Image("home-button-icon.png",true);
+    ImageView view = new ImageView(homeimage);
+    view.setFitHeight(40);
+    view.setPreserveRatio(true);
+    homebutton.setStyle("-fx-background-color: #CC5500");
+    homebutton.setPrefSize(80, 95);
+    homebutton.setGraphic(view);
+    Userbutton.setText(Username);
+    SearchButton.setOnAction((ActionEvent event) -> {
+		String Title = "Title: "+SearchBar.getText();
+		
+		try {
+			Search(Title,Username,HomePage);
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    
+	});
+    grid.add(OrangeRectangle,2,0);
+    grid.add(AllItems,1,0);
+    grid.add(Userbutton,3,0);
+    grid.add(homebutton,0,0);
+    HBox hbox1=new HBox();
+    hbox1.getChildren().addAll(Search,SearchBar,SearchButton);
+    vbox1.getChildren().addAll(grid,ClearRect,hbox1);
+    HomePage.getIcons().add(new Image("LonghornLibrary.png"));
+    HomePage.setTitle("Longhorn Library Home");
+    Image background = new Image ("The-Peabody-Library-building.jpg");
+	 ImageView  backgroundview = new ImageView(background);
+	 backgroundview.setX(0);
+	 backgroundview.setFitWidth(650);
+	 backgroundview.setPreserveRatio(true);
+	 Group root = new Group();
+	 root.getChildren().addAll(backgroundview,vbox1);
+   Scene scene = new Scene(root, 650, 420);
+    
+    HomePage.setScene(scene);
+    HomePage.show();
+
+}
+private static void Search(String title, String username, Stage Home) throws IOException, ClassNotFoundException {
+	// TODO Auto-generated method stub
+	Socket sock = null;
+	try {
+		sock = new Socket(host, 1717);
+	} catch (UnknownHostException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	} catch (IOException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	}
+	writer=new PrintWriter(sock.getOutputStream());
+	writer.println("Search-"+title);
+	writer.flush();
+	ObjectInputStream objectInput = null;
+	ArrayList<String> List = new ArrayList();
+	ArrayList<String> BookList = new ArrayList();
+	try {
+		
+		 objectInput = new ObjectInputStream(sock.getInputStream());
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	try {
+		Object object = objectInput.readObject();
+        List =  (ArrayList<String>) object;
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	finally {
+		if(!List.isEmpty()) {
+		Stage stage = new Stage();
+		for(int i = 0; List.size()>i;i++) {
+		String str = List.get(i).toString();
+		String[] parts = str.split("-",10);
+
+		String part2 = parts[8]; 
+		part2 = part2.replace("=",":");
+		part2 = part2.replace(",","");
+		
+		String part3 = parts[1]; 
+		part3 = part3.replace("=",":");
+		part3 = part3.replace(",","");
+		
+		String part4 = parts[3]; 
+		part4 = part4.replace("=",":");
+		part4 = part4.replace(",","");
+		
+		String part5 = parts[5]; 
+		part5 = part5.replace("=",":");
+		part5 = part5.replace(",","");
+	
+		String part6 = parts[7];
+		part6 = part6.replace("=",":");
+		part6 = part6.replace(",","");
+		part2 = part2.replace("}","");
+		
+
+		String arr = new String();
+		arr=part2+","+part3+","+part4+","+part5+","+part6;
+		BookList.add(arr);
+		}
+		stage.getIcons().add(new Image("LonghornLibrary.png"));
+        stage.setTitle("All Items");
+        VBox vbox = new VBox();
+        String str;
+        
+        Color BURNT = Color.rgb(204,85,0);
+        VBox vbox1 = new VBox();
+    	GridPane grid = new GridPane();
+    	Rectangle OrangeRectangle = new Rectangle();
+    	OrangeRectangle.setFill(BURNT);
+    	OrangeRectangle.setWidth(410);
+    	OrangeRectangle.setHeight(94);
+    	Button Userbutton = new Button();
+    	Button AllItems = new Button("All Items");
+    	AllItems.setOnAction((ActionEvent event) -> { 
+    	});
+    	Button homebutton = new Button();
+    	homebutton.setOnAction((ActionEvent event) -> {
+    		stage.close();
+    		HomePage(username);
+    	    
+    	});
+    	Userbutton.setOnAction((ActionEvent event) -> {
+    		
+    		UserPage(username);
+    	    
+    	});
+    	Userbutton.setStyle("-fx-background-color: #CC5500");
+    	Userbutton.setPrefSize(80, 94);
+    	AllItems.setStyle("-fx-background-color: #CC5500");
+    	AllItems.setPrefSize(80, 94);
+    	Image homeimage = new Image("home-button-icon.png",true);
+        ImageView view = new ImageView(homeimage);
+        view.setFitHeight(40);
+        view.setPreserveRatio(true);
+        homebutton.setStyle("-fx-background-color: #CC5500");
+        homebutton.setPrefSize(80, 95);
+        homebutton.setGraphic(view);
+        Userbutton.setText(username);
+        Home.close();
+        grid.add(OrangeRectangle,2,0);
+        grid.add(AllItems,1,0);
+        grid.add(Userbutton,3,0);
+        grid.add(homebutton,0,0);
+        vbox1.getChildren().addAll(grid);
+        vbox.getChildren().add(vbox1);
+        for (int i = 0; i < BookList.size(); i++)
+        {
+        	String str1 = BookList.get(i);
+        	String buttons = str1.toString();
+        	buttons = buttons.replace("[","");
+        	buttons = buttons.replace("]","");
+        	buttons = buttons.replace(":",": ");
+        	Button Button = new Button(buttons);
+        	Button.setMinSize(100,100);
+        	Button.setPrefWidth(600);
+            vbox.getChildren().add(Button);
+            
+            Button.setOnAction(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent event) {
+                	String[] PreviewTitle = Button.getText().split(",");
+                	String Title = PreviewTitle[0];
+                	Preview(Title, username,stage);
+                	
+                }
+                });
+        }
+        // create a scene
+        ScrollPane Scroll = new ScrollPane();
+        Scroll.setContent(vbox);
+        Scene scene = new Scene(Scroll, 660, 500);
+        
+        // set the scene
+        stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent e) {
+             HomePage(username);
+            }
+          });
+        stage.setScene(scene);
+        stage.setResizable(false);
+        stage.show();
+    }
+		else {
+			Stage stage = new Stage();
+			VBox vbox = new VBox();
+			Label label = new Label("This Item Does Not Exist");
+			label.setTextFill(Color.RED);
+			vbox.getChildren().add(label);
+			Scene scene = new Scene(vbox, 200, 50);
+			  
+            // set the scene
+            stage.setScene(scene);
+            
+            stage.show();
+			}
+	}
+	}
+
+
+
+protected void processRequest(String input) {
+	return;
+	}
+static void AllBookPage(String Username) throws IOException {
+	
+	FileOutputStream file;
+	Socket sock = null;
+	try {
+		sock = new Socket(host, 1717);
+	} catch (UnknownHostException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	} catch (IOException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	}
+	HashMap <String,String> temp= new HashMap();
+	temp.put("temp","temp");
+	 try {
+	      File signupfile = new File("temp.txt");
+	      if (signupfile.createNewFile()) {
+	        System.out.println("File created: " + signupfile.getName());
+	      } else {
+	        System.out.println("File already exists.");
+	      }
+	    } catch (IOException e) {
+	      System.out.println("An error occurred.");
+	      e.printStackTrace();
+	    }
+	 finally {
+		 FileOutputStream temper;
+		try {
+			temper = new FileOutputStream("temp.txt");
+			ObjectOutputStream output = new ObjectOutputStream(temper);
+			output.writeObject(temp);
+			output.close();	
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		finally {
+			
+			writer=new PrintWriter(sock.getOutputStream());
+			writer.println("AllItems");
+			writer.flush();
+			ObjectInputStream objectInput = null;
+			ArrayList<String[]> List = new ArrayList();
+			  ArrayList<String> BookList = new ArrayList();
+			try {
+				
+				 objectInput = new ObjectInputStream(sock.getInputStream());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				Object object = objectInput.readObject();
+                List =  (ArrayList<String[]>) object;
+              
+                for(int i = 0; i<List.size();i++) {
+                	String str = Arrays.toString(List.get(i));
+                	str = str.replace("[","");
+                	str = str.replace("]","");
+                BookList.add(str);
+                }
+			} catch (IOException | ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			finally {
+				Stage stage = new Stage();
+				try {  	           
+					stage.getIcons().add(new Image("LonghornLibrary.png"));
+		            stage.setTitle("All Items");
+		            VBox vbox = new VBox();
+		            String str;
+		            
+		            Color BURNT = Color.rgb(204,85,0);
+		            VBox vbox1 = new VBox();
+		        	GridPane grid = new GridPane();
+		        	Rectangle OrangeRectangle = new Rectangle();
+		        	OrangeRectangle.setFill(BURNT);
+		        	OrangeRectangle.setWidth(410);
+		        	OrangeRectangle.setHeight(94);
+		        	Button Userbutton = new Button();
+		        	Button AllItems = new Button("All Items");
+		        	AllItems.setOnAction((ActionEvent event) -> { 
+		        	});
+		        	Button homebutton = new Button();
+		        	homebutton.setOnAction((ActionEvent event) -> {
+		        		stage.close();
+		        		HomePage(Username);
+		        	    
+		        	});
+		        	Userbutton.setOnAction((ActionEvent event) -> {
+		        		
+		        		UserPage(Username);
+		        	    
+		        	});
+		        	Userbutton.setStyle("-fx-background-color: #CC5500");
+		        	Userbutton.setPrefSize(80, 94);
+		        	AllItems.setStyle("-fx-background-color: #CC5500");
+		        	AllItems.setPrefSize(80, 94);
+		        	Image homeimage = new Image("home-button-icon.png",true);
+		            ImageView view = new ImageView(homeimage);
+		            view.setFitHeight(40);
+		            view.setPreserveRatio(true);
+		            homebutton.setStyle("-fx-background-color: #CC5500");
+		            homebutton.setPrefSize(80, 95);
+		            homebutton.setGraphic(view);
+		            Userbutton.setText(Username);
+		            
+		            grid.add(OrangeRectangle,2,0);
+		            grid.add(AllItems,1,0);
+		            grid.add(Userbutton,3,0);
+		            grid.add(homebutton,0,0);
+		            vbox1.getChildren().addAll(grid);
+		            vbox.getChildren().add(vbox1);
+		            for (int i = 0; i < BookList.size(); i++)
+		            {
+		            	str = BookList.get(i).toString();
+		            	str = str.replace("[","");
+	                	str = str.replace("]","");
+	                	str = str.replace(":",": ");
+	                	Button Button = new Button(str);
+	                	Button.setMinSize(100,100);
+	                	Button.setPrefWidth(600);
+	                	vbox.setAlignment(Pos.CENTER);
+		                vbox.getChildren().add(Button);
+		                
+		                Button.setOnAction(new EventHandler<ActionEvent>() {
+			                @Override
+			                public void handle(ActionEvent event) {
+			                	String[] PreviewTitle = Button.getText().split(",");
+			                	String Title = PreviewTitle[0];
+			                	Preview(Title, Username,stage);
+			                	
+			                }
+			                });
+		            }
+		            // create a scene
+		            
+		            ScrollPane Scroll = new ScrollPane();
+		            Scroll.setContent(vbox);
+		            
+		            Scene scene = new Scene(Scroll, 660, 500);
+		  
+		            // set the scene
+		            stage.setScene(scene);
+		            stage.setResizable(false);
+		            stage.show();
+		        }
+		  
+		        catch (Exception e) {
+		  
+		            System.out.println(e.getMessage());
+		        }
+				stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+			        @Override
+			        public void handle(WindowEvent e) {
+			         LogOff(Username);
+			        }
+			      });
+		    }
+			}
+	}
+	 }
+	public static void Preview(String Title, String Username, Stage primeStage){
+		Socket sock = null;
+		try {
+			sock = new Socket(host, 1717);
+			
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		finally {
+		try {
+			writer=new PrintWriter(sock.getOutputStream());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		writer.println("PreviewPage-"+Title);
+		writer.flush();
+		
+		
+		ObjectInputStream objectInput = null;
+		String[] List = new String[] {};
+		
+		try {
+			
+			 objectInput = new ObjectInputStream(sock.getInputStream());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		try {
+			Object object = objectInput.readObject();
+            List =  (String[]) object;
+          
+            
+		} catch (IOException | ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		finally{
+			if(List.length!=0) {
+			Stage stage = new Stage();
+			    stage.getIcons().add(new Image("LonghornLibrary.png"));    
+	            stage.setTitle(Title.replace("Title: ","")+" Page");
+	            VBox vbox = new VBox();
+	            String imageURL = List[List.length-1].toString().replace("ImageLink:","");
+            	Image image = new Image (imageURL);
+           	 	ImageView  bookview = new ImageView(image);
+           	 bookview.setFitWidth(200);
+             
+            bookview.setPreserveRatio(true);
+           	 vbox.getChildren().add(bookview);
+           	 VBox leftbox = new VBox();
+	            for (int i = 0; i < List.length-1; i++)
+	            {
+	            	if(List[i].toString().contains("Description")) {
+	            		TextArea Description = new TextArea();
+	            		String des = List[i].toString().replace("Description:", "Description: \n");
+	            		Description.setText(des);
+	            		Description.setPrefHeight(490);
+	            		Description.setStyle("-fx-control-inner-background:TRANSPARENT; -fx-font-family: Consolas; -fx-highlight-fill: TRANSPARENT; -fx-highlight-text-fill: TRANSPARENT; -fx-text-fill:BLACK; ");
+	            		Description.setEditable(false);
+	            		Description.setWrapText(true);
+	            		 leftbox.getChildren().add(Description);
+	            	}
+	            	else {
+	            	Label Str = new Label(List[i].toString().replace(":",": "));
+	            	Str.setFont(new Font("Arial",15));
+	            	Str.setTextFill(Color.WHITE);
+	            	vbox.getChildren().add(Str);
+	            	}
+	            }
+	            	
+                	Button Reviews = new Button("Reviews");
+                	Reviews.setOnAction(new EventHandler<ActionEvent>() {
+	                	
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	Stage primaryStage = new Stage();
+		                  
+		                     VBox root = new VBox();
+		                     root.getChildren().add(new Label("Reviews:"));
+		                     Socket sock = null;
+		             		try {
+		             			sock = new Socket(host, 1717);
+		             			
+		             		} catch (IOException e1) {
+		             			// TODO Auto-generated catch block
+		             			e1.printStackTrace();
+		             		}
+		             		finally {
+		             		try {
+		             			writer=new PrintWriter(sock.getOutputStream());
+		             		} catch (IOException e) {
+		             			e.printStackTrace();
+		             		}
+		             		writer.println("GetReviews-"+Title);
+		             		writer.flush();
+		             		ObjectInputStream objectInput = null;
+		            		ArrayList<String> List = new ArrayList();
+		            		
+		            		try {
+		            			
+		            			 objectInput = new ObjectInputStream(sock.getInputStream());
+		            		} catch (IOException e) {
+		            			// TODO Auto-generated catch block
+		            			e.printStackTrace();
+		            		}
+		            		try {
+		            			Object object = objectInput.readObject();
+		                        List =  (ArrayList<String>) object;
+		                      
+		                        
+		            		} catch (IOException | ClassNotFoundException e) {
+		            			// TODO Auto-generated catch block
+		            			e.printStackTrace();
+		            		}
+		            		String AllReviews= new String();
+		            		for(int i =0; i<List.size();i++) {
+		            			AllReviews=AllReviews+"\n"+"================"+"\n"+List.get(i)+"\n";
+		            		}
+		                     TextArea ReviewArea = new TextArea(AllReviews);	
+		                     ReviewArea.setEditable(false);
+		                     ReviewArea.setWrapText(true);
+		                     ReviewArea.setPrefWidth(300);
+		                     ReviewArea.setPrefHeight(300);
+		                     root.getChildren().add(ReviewArea); 
+		                     Button AddReview = new Button("Add Review");
+		                     AddReview.setOnAction(new EventHandler<ActionEvent>() {
+		 	                	
+		 		                @Override
+		 		                public void handle(ActionEvent event) {
+		 		                	ReviewArea.setText("");
+		 		                	ReviewArea.setEditable(true);
+		 		                	root.getChildren().remove(AddReview);
+		 		                	FileOutputStream file;
+		 		                	Button Post = new Button("Post");
+				                     Post.setOnAction(new EventHandler<ActionEvent>() {
+				 	                	
+				 		                @Override
+				 		                public void handle(ActionEvent event) {
+				 		                	primaryStage.close();
+				 		                	String GetReview = ReviewArea.getText();
+				 		                	GetReview = GetReview.replace("-", " ");
+				 		                	try {
+				 		             	      File signupfile = new File("temp.txt");
+				 		             	      if (signupfile.createNewFile()) {
+				 		             	        System.out.println("File created: " + signupfile.getName());
+				 		             	      } else {
+				 		             	        System.out.println("File already exists.");
+				 		             	      }
+				 		             	    } catch (IOException e) {
+				 		             	      System.out.println("An error occurred.");
+				 		             	      e.printStackTrace();
+				 		             	    }
+				 		             	 finally {
+				 		             		 FileOutputStream temper;
+				 		             		try {
+				 		             			temper = new FileOutputStream("temp.txt");
+				 		             			ObjectOutputStream output = new ObjectOutputStream(temper);
+				 		             			output.writeObject(GetReview);
+				 		             			output.close();	
+				 		             		} catch (IOException e) {
+				 		             			// TODO Auto-generated catch block
+				 		             			e.printStackTrace();
+				 		             		}
+				 		             		finally {
+		 		                	
+		 		                	writer.println("Post-"+Title+"-"+Username);
+				             		writer.flush();
+				 		             		}
+		 		                }
+				 		                }
+				                     });
+				                     root.getChildren().add(Post);
+		 		                }
+		                     });
+		                     
+		                     root.getChildren().add(AddReview); 
+		                     Scene scene = new Scene(root,300,500); 
+		                     
+		                     primaryStage.setScene(scene);  
+		                     primaryStage.getIcons().add(new Image("LonghornLibrary.png"));
+		                     primaryStage.setTitle("Reviews");  
+		                     primaryStage.show();  
+		                     
+		                }
+		                }
+                	});
+                	
+	                
+	                	Button Check = new Button("Check-Out");
+	                	vbox.getChildren().add(Reviews);
+		                vbox.getChildren().add(Check);
+	                Check.setOnAction(new EventHandler<ActionEvent>() {
+	                	
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	String str = Title.replace("Title: ","");
+		                	 Socket sock = null;
+		              		try {
+		              			sock = new Socket(host, 1717);
+		              			
+		              		} catch (IOException e1) {
+		              			// TODO Auto-generated catch block
+		              			e1.printStackTrace();
+		              		}
+		              		finally {
+		              		try {
+		              			writer=new PrintWriter(sock.getOutputStream());
+		              		} catch (IOException e) {
+		              			e.printStackTrace();
+		              		}
+		              		writer.println("IsIt "+str);
+		              		writer.flush();
+		              		}
+		         		 
+		                	
+							BufferedReader input = null;
+							String message = null;
+							try {
+								 input =new BufferedReader(new InputStreamReader(sock.getInputStream()));
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							try {
+								 message = input.readLine();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							finally {
+		                	 if(message.toString().contains("Available")) {
+		                		 stage.close();
+			   						primeStage.close();
+			   						HomePage(Username);
+		                		 Stage CheckedOut = new Stage();
+		   					  GridPane CheckedOutgrid = new GridPane();
+		   						Scene CheckedOutscene = new Scene(CheckedOutgrid, 250, 20);
+		   						Label Checkedout = new Label("You Have Checked Out "+ str);
+		   					
+		   						Checkedout.setTextFill(Color.RED);
+		   						CheckedOutgrid.add(Checkedout,0,0);
+		   						CheckedOut.setScene(CheckedOutscene);
+		   						CheckedOut.show();
+		   						
+		                	 
+		                	try {
+		            			sock = new Socket(host, 1717);
+		            			
+		            		} catch (IOException e1) {
+		            			// TODO Auto-generated catch block
+		            			e1.printStackTrace();
+		            		}
+		            		finally {
+		            		try {
+		            			writer=new PrintWriter(sock.getOutputStream());
+		            			 //objectOutput = new ObjectOutputStream(sock.getOutputStream());
+		            		} catch (IOException e) {
+		            			// TODO Auto-generated catch block
+		            			e.printStackTrace();
+		            		}
+		            		writer.println("CheckOut-"+Title+"- "+Username);
+		            		//objectOutput.writeObject(Title);
+		            		writer.flush();
+		            		}
+		                }
+		                	 else {
+		                		 Stage Notstage = new Stage();
+		    	       			 try {
+		    	       				 	stage.getIcons().add(new Image("LonghornLibrary.png"));
+		    	       		            stage.setTitle("Not Available");
+		    	       		            
+		    	       		            VBox vbox2 = new VBox();
+		    	       		  
+		    	       		            Label label = new Label("This Item is Not Available at the moment"+ '\n' +"Would you like to place the book on hold? ");
+		    	       		            Button hold = new Button("Hold");
+		    	       		         vbox2.getChildren().add(label);
+		    	       		         vbox2.getChildren().add(hold);
+		    	       		            // create a scene
+		    	       		            Scene scene2 = new Scene(vbox2, 300, 300);
+		    	       		  
+		    	       		            // set the scene
+		    	       		            stage.setScene(scene2);
+		    	       		  
+		    	       		            stage.show();
+		    	       		         hold.setOnAction(new EventHandler<ActionEvent>() {
+		    	 	                	
+		    	 		                @Override
+		    	 		                public void handle(ActionEvent event) {
+		    	 		                	Socket sock=null;
+		    	 		                	try {
+		    			            			sock = new Socket(host, 1717);
+		    			            			
+		    			            		} catch (IOException e1) {
+		    			            			// TODO Auto-generated catch block
+		    			            			e1.printStackTrace();
+		    			            		}
+		    			            		finally {
+		    			            		try {
+		    			            			writer=new PrintWriter(sock.getOutputStream());
+		    			            		} catch (IOException e) {
+		    			            			e.printStackTrace();
+		    			            		}
+		    			            		writer.println("HoldPls"+Title+"-"+Username);
+		    			            		writer.flush();
+		    			            		BufferedReader input = null;
+		    								String message = null;
+		    								try {
+		    									 input =new BufferedReader(new InputStreamReader(sock.getInputStream()));
+		    								} catch (IOException e) {
+		    									// TODO Auto-generated catch block
+		    									e.printStackTrace();
+		    								}
+		    								try {
+		    									 message = input.readLine();
+		    								} catch (IOException e) {
+		    									// TODO Auto-generated catch block
+		    									e.printStackTrace();
+		    								}
+		    								finally {
+		    									Stage stage2= new Stage();
+		    									if(message.contains("AlreadyHeld")) {
+		    		    	       		            
+		    		    	       		            VBox vbox3 = new VBox();
+		    		    	       		  
+		    		    	       		            Label label2 = new Label("Only One Held Item at a Time");
+		    		    	       		         vbox3.getChildren().add(label2);
+		    		    	       		            // create a scene
+		    		    	       		            Scene scene2 = new Scene(vbox3, 200, 100);
+		    		    	       		  
+		    		    	       		            // set the scene
+		    		    	       		            stage2.setScene(scene2);
+		    		    	       		  
+		    		    	       		            stage2.show();
+		    									}
+		    									else {
+		    										VBox vbox3 = new VBox();
+		  		    		    	       		  
+		    		    	       		            Label label2 = new Label("Now Holding "+Title);
+		    		    	       		         vbox3.getChildren().add(label2);
+		    		    	       		            // create a scene
+		    		    	       		            Scene scene2 = new Scene(vbox3, 200, 100);
+		    		    	       		  
+		    		    	       		            // set the scene
+		    		    	       		            stage2.setScene(scene2);
+		    		    	       		  
+		    		    	       		            stage2.show();
+		    									}
+		    									
+		    								}
+		    			            		}
+		    	 		                }
+		    	       		         });
+		    	       		        
+		    	       		        }
+		    	       		  
+		    	       		        catch (Exception e) {
+		    	       		  
+		    	       		            System.out.println(e.getMessage());
+		    	       		        }
+				                }
+							}
+		                }
+	                });
+		                
+		                
+	                
+	                
+	                
+	                
+	                // create a scene
+	                
+	                BackgroundFill background_fill = new BackgroundFill(Color.DARKGREEN, 
+	                        CornerRadii.EMPTY, Insets.EMPTY);
+
+
+		            Background background = new Background(background_fill);
+
+
+					vbox.setBackground(background);
+					
+	                HBox hbox = new HBox();
+	                hbox.getChildren().addAll(vbox,leftbox);
+		            Scene scene = new Scene(hbox, 500, 500);
+		  
+		            // set the scene
+		            stage.setResizable(false);
+		            stage.setScene(scene);
+		            
+		                
+		            stage.show();
+		}
+			
+		}
+		
+		}
+		}
+		
+		
+	
+		public static void UserPage(String Username){
+			Stage stage = new Stage();
+			Socket sock = null;
+			Send("GrabAvatar"+"="+Username);
+			try {
+				BufferedReader input = null;
+        		String message = null;
+					try {
+						sock = new Socket(host, 1717);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+					
+					try {
+						input =new BufferedReader(new
+								InputStreamReader(sock.getInputStream()));
+						message=input.readLine();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+        		Image Avatar = new Image(message);
+        		ImageView AvatarView=new ImageView(Avatar);
+        		AvatarView.setFitHeight(100);
+        		AvatarView.setFitWidth(100);
+//        		AvatarView.setPreserveRatio(true);
+        		stage.getIcons().add(new Image("LonghornLibrary.png"));
+	            stage.setTitle("My Page");
+	            
+             	try {
+        			sock = new Socket(host, 1717);
+        			
+        		} catch (IOException e1) {
+        			// TODO Auto-generated catch block
+        			e1.printStackTrace();
+        		}
+        		finally {
+        		
+	            VBox vbox = new VBox();
+	            Label label = new Label(Username);
+	            label.setFont(new Font("Arial", 20));
+	            vbox.getChildren().add(label);
+	            Button MyStuff = new Button("My Stuff");
+	            Button LogOut = new Button("Log Out");
+	            LogOut.setOnAction(new EventHandler<ActionEvent>() {
+	                @Override
+	                public void handle(ActionEvent event) {
+	                	LogOff(Username);
+	                }
+	                });
+	            Button ChangeAvatar = new Button("Change Avatar");
+	            ChangeAvatar.setOnAction(new EventHandler<ActionEvent>() {
+	                @Override
+	                public void handle(ActionEvent event) {
+	                	Stage ChangeStage = new Stage();
+	                	VBox Change= new VBox();
+	                	Label ChangeLabel= new Label("URL");
+	                	TextField ChangeField=new TextField();
+	                	Button ChangeButton = new Button("Confirm");
+	                	Change.getChildren().addAll(ChangeLabel,ChangeField,ChangeButton);
+	                	Scene changescene = new Scene(Change, 200,100 );
+	              	  
+	    	            // set the scene
+	                	ChangeStage.setScene(changescene);
+	    	  
+	    	            ChangeStage.show();
+	                	ChangeButton.setOnAction(new EventHandler<ActionEvent>() {
+	    	                @Override
+	    	                public void handle(ActionEvent event) {
+	    	                	Socket sock=null;
+	    	                	try {
+									sock = new Socket(host, 1717);
+								} catch (UnknownHostException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+	    	                	BufferedReader input = null;
+	    	            		String message = null;
+	    	                	Send("AvatarChange="+Username+"="+ChangeField.getText());
+	    	                	ChangeStage.close();
+	    	                	stage.close();
+	    	                	UserPage(Username);
+	                }
+	                });
+	                }
+	            });
+	            MyStuff.setOnAction(new EventHandler<ActionEvent>() {
+	                @Override
+	                public void handle(ActionEvent event) {
+	                	Socket sock = null;
+	            		try {
+	            			sock = new Socket(host, 1717);
+	            			
+	            		} catch (IOException e1) {
+	            			// TODO Auto-generated catch block
+	            			e1.printStackTrace();
+	            		}
+	            		finally {
+	            		try {
+	            			writer=new PrintWriter(sock.getOutputStream());
+	            		} catch (IOException e) {
+	            			e.printStackTrace();
+	            		}
+	            		writer.println("MyStuff-"+ Username);
+	            		writer.flush();
+	            		
+	            		ObjectInputStream objectInput = null;
+	            		ArrayList<String> List = new ArrayList();
+	            		
+	            		try {
+	            			
+	            			 objectInput = new ObjectInputStream(sock.getInputStream());
+	            		} catch (IOException e) {
+	            			// TODO Auto-generated catch block
+	            			e.printStackTrace();
+	            		}
+	            		try {
+	            			Object object = objectInput.readObject();
+	                        List =  (ArrayList<String>) object;
+	                        MyStuffStage(List, Username);
+	                        
+	            		} catch (IOException | ClassNotFoundException e) {
+	            			// TODO Auto-generated catch block
+	            			e.printStackTrace();
+	            		}
+	            		}
+	            		
+	                }
+	                
+                });
+	            
+	            vbox.getChildren().addAll(AvatarView,ChangeAvatar,MyStuff,LogOut);
+	            
+	            Scene scene = new Scene(vbox, 200, 250);
+	            // set the scene
+
+	            BackgroundFill background_fill = new BackgroundFill(Color.DARKSEAGREEN, 
+                        CornerRadii.EMPTY, Insets.EMPTY);
+
+
+	            Background background = new Background(background_fill);
+
+
+				vbox.setBackground(background);
+
+	            stage.setResizable(false);
+	            stage.setScene(scene);
+	  
+	            stage.show();
+	        }
+	            }
+	            
+
+
+	  
+	        catch (Exception e) {
+	  
+	            System.out.println(e.getMessage());
+	        }
+	        
+	    }
+	
+
+
+		public static void MyStuffStage(ArrayList<String> List,String Username){
+			 Stage stage = new Stage();
+			 try {
+				 	stage.getIcons().add(new Image("LonghornLibrary.png"));
+		            stage.setTitle("My Stuff");
+		  
+		            GridPane grid = new GridPane();
+		  
+		            Label label = new Label("Checked Out:");
+		  
+		            grid.getChildren().add(label);
+
+		            for (int i = 0, j =1; i < List.size(); i++,j++)
+		            {
+		            	grid.add(new Label(List.get(i)),0,j);
+		            	Button button = new Button("Return-"+List.get(i));
+		            	grid.add(button,1,j);
+		            	 button.setOnAction(new EventHandler<ActionEvent>() {
+		 	                @Override
+		 	                public void handle(ActionEvent event) {
+		 	                	String book = button.getText();
+		 	                	Send(book+"-"+ Username);
+		 	                	stage.close();
+		 	                }
+		                 });
+		            }
+		  
+		            // create a scene
+		            Scene scene = new Scene(grid, 300, 300);
+		  
+		            // set the scene
+		            stage.setScene(scene);
+		  
+		            stage.show();
+		        }
+		  
+		        catch (Exception e) {
+		  
+		            System.out.println(e.getMessage());
+		        }
+		    }
+		 public static void Send(String message){
+			 Socket sock = null;
+     		try {
+     			sock = new Socket(host, 1717);
+     			
+     		} catch (IOException e1) {
+     			// TODO Auto-generated catch block
+     			e1.printStackTrace();
+     		}
+     		finally {
+     		try {
+     			writer=new PrintWriter(sock.getOutputStream());
+     		} catch (IOException e) {
+     			e.printStackTrace();
+     		}
+     		writer.println(message);
+     		writer.flush();
+     		}
+		 }
+		public static void LogOff(String Username) {
+			Send("LogOff"+Username);
+			System.exit(0);
+			
+			
+			
+		}
+		public static void AdminScreen(String User) {
+			Stage stage = new Stage();
+			 try {
+				 	stage.getIcons().add(new Image("LonghornLibrary.png"));
+		            stage.setTitle("Admin");
+		            VBox vbox = new VBox();
+		            Label label = new Label("Admin Commands");
+		            vbox.getChildren().add(label);
+		            Button LogOut = new Button("Log Out");
+		            Button Catolog = new Button("Catolog");
+		            Button LogOthersOut = new Button("Make New Admin");
+		            LogOthersOut.setOnAction(new EventHandler<ActionEvent>() {
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	MakeNewAdmin();
+		                	
+		                }
+		                });
+		            Catolog.setOnAction(new EventHandler<ActionEvent>() {
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	HomePage(User);
+		                	stage.close();
+		                	AdminScreen(User);
+		                }
+		                });
+		            
+		            LogOut.setOnAction(new EventHandler<ActionEvent>() {
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	LogOff(User);
+		                }
+		                });
+		            Button AddItem = new Button("Add Item");
+		            AddItem.setOnAction(new EventHandler<ActionEvent>() {
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	AddItem();
+		                }
+		                });
+		            vbox.getChildren().add(LogOthersOut);
+		            vbox.getChildren().add(AddItem);
+		            vbox.getChildren().add(Catolog);
+		            vbox.getChildren().add(LogOut);
+		        
+		            Scene scene = new Scene(vbox, 300, 300);
+		            stage.setScene(scene);
+		  
+		            stage.show();
+		        }
+		  
+		        catch (Exception e) {
+		  
+		            System.out.println(e.getMessage());
+		        }
+		    }
+		public static void AddItem(){
+			Stage stage = new Stage();
+			try {
+				  
+	            // set title for the stage
+				stage.getIcons().add(new Image("LonghornLibrary.png"));
+	            stage.setTitle("VBox");
+	  
+	            // create a VBox
+	            VBox vbox = new VBox();
+	  
+	            // create a label
+	            Label label = new Label("Author");
+	            TextField Author = new TextField();
+	            Label label2 = new Label("Description");
+	            TextArea Description = new TextArea();
+	            Description.setWrapText(true);
+	            Label label3 = new Label("Genre");
+	            TextField Genre = new TextField();
+	            Label label4 = new Label("Media (Book, Movie, Music, Game)");
+	            TextField Media = new TextField();
+//	            Label label5 = new Label("Status");
+//	            TextField Status = new TextField();
+	            Label label6 = new Label("Title");
+	            TextField Title = new TextField();
+	            Label label7 = new Label("ImageURL");
+	            TextField URL = new TextField();
+	            vbox.getChildren().add(label);
+	            vbox.getChildren().add(Author);
+	            
+	            vbox.getChildren().add(label2);
+	            vbox.getChildren().add(Description);
+	            
+	            vbox.getChildren().add(label3);
+	            vbox.getChildren().add(Genre);
+	            
+	            vbox.getChildren().add(label4);
+	            vbox.getChildren().add(Media);
+	            
+//	            vbox.getChildren().add(label5);
+//	            vbox.getChildren().add(Status);
+	            
+	            vbox.getChildren().add(label6);
+	            vbox.getChildren().add(Title);
+	            
+	            vbox.getChildren().add(label7);
+	            vbox.getChildren().add(URL);
+	            
+	            
+	            Button create = new Button("Confirm");
+	            Button AddItem = new Button("Add Item");
+	            create.setOnAction(new EventHandler<ActionEvent>() {
+	                @Override
+	                public void handle(ActionEvent event) {
+	            String arr = "Create~"+Author.getText().toString()+"~"+Description.getText().toString()+"~"+Genre.getText().toString()+"~"+Media.getText().toString()+"~"+Title.getText().toString()+"~"+URL.getText().toString();
+	            Socket sock = null;
+	            try {
+				      File stringfile = new File("String.txt");
+				      if (stringfile.createNewFile()) {
+				        System.out.println("File created: " + stringfile.getName());
+				      } else {
+				        System.out.println("File already exists.");
+				      }
+				    } catch (IOException e) {
+				      System.out.println("An error occurred.");
+				      e.printStackTrace();
+				    }
+				 finally {
+					 FileOutputStream file;
+					try {
+						file = new FileOutputStream("stringfile.txt");
+						ObjectOutputStream output = new ObjectOutputStream(file);
+						output.writeObject(arr);
+						output.close();	
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					finally {
+						writer.println("Create");
+						writer.flush();
+						stage.close();
+					}
+	                }
+	                }
+	            });
+	            vbox.getChildren().add(create);
+	  
+	            // create a scene
+	            Scene scene = new Scene(vbox, 300, 300);
+	  
+	            // set the scene
+	            stage.setScene(scene);
+	          stage.setMaximized(true);
+	            stage.show();
+	        }
+	  
+	        catch (Exception e) {
+	  
+	            System.out.println(e.getMessage());
+	        }
+		}
+		public static void MakeNewAdmin() {
+			Stage stage = new Stage();
+			Send("GetUsers");
+			stage.getIcons().add(new Image("LonghornLibrary.png"));
+			 stage.setTitle("Other Users");
+			  
+	            // create a VBox
+	            VBox vbox = new VBox();
+	  
+			ObjectInputStream objectInput = null;
+			ArrayList<String> Names = new ArrayList();
+			  ArrayList<String> NameList = new ArrayList();
+			  Socket sock;
+				
+					
+			try {
+				sock = new Socket(host, 1717);
+				 objectInput = new ObjectInputStream(sock.getInputStream());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				Object object = objectInput.readObject();
+				Names =  (ArrayList<String>) object;
+              
+                
+			} catch (IOException | ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			finally {
+				for(int i = 0; i<Names.size();i++) {
+					Button NewAdminButton = new Button("Make: "+Names.get(i).toString() +" Admin");
+					vbox.getChildren().add(NewAdminButton);
+					NewAdminButton.setOnAction(new EventHandler<ActionEvent>() {
+		                @Override
+		                public void handle(ActionEvent event) {
+		                	String name = NewAdminButton.getText().toString();
+		                	name=name.replace("Make: ","");
+		                	name=name.replace(" Admin","");
+		                	Send("MakeNewAdmin-"+name);
+		                }
+		                });
+				
+                }
+			}
+			 Scene scene = new Scene(vbox, 300, 300);
+			  
+	            // set the scene
+	            stage.setScene(scene);
+	  
+	            stage.show();
+		}
+		public static void Welcome(String U, int Admin) {
+			Stage stage = new Stage();
+			stage .setTitle("Welcome");
+			stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+		        @Override
+		        public void handle(WindowEvent e) {
+		        	 LogOff(U);
+		        }
+		      });
+            // create a VBox
+            HBox hbox = new HBox();
+  
+            // create a label
+           
+            
+            Image Leftimage = new Image ("LeftDoor.png");
+			 ImageView  Leftview = new ImageView(Leftimage);
+			 Leftview.setX(0);
+			 Leftview.setFitHeight(500);
+			 Leftview.setFitWidth(350);
+			 Leftview.setPreserveRatio(true);
+			 stage.show();
+				Image Rightimage = new Image ("RightDoor.png");
+				 ImageView  Rightview = new ImageView(Rightimage);
+				 Rightview.setX(0);
+				 Rightview.setFitHeight(500);
+				 Rightview.setFitWidth(350);
+				 Rightview.setPreserveRatio(true);
+		    
+		    hbox.getChildren().addAll(Leftview,Rightview);
+            
+            Image background = new Image ("The-Peabody-Library-building.jpg");
+			 ImageView  backgroundview = new ImageView(background);
+			 backgroundview.setX(-155);
+			 backgroundview.setFitHeight(500);
+			 backgroundview.setPreserveRatio(true);
+			 Group root = new Group();
+			 root.getChildren().addAll(backgroundview,hbox);
+            Scene scene = new Scene(root, 445, 500);
+  
+            // set the scene
+            stage.setScene(scene);
+  
+            stage.show();
+			
+		  // translate
+		  TranslateTransition translate = new TranslateTransition();
+		  TranslateTransition righttranslate = new TranslateTransition();
+		  
+		  righttranslate.setNode(Rightview);
+		  righttranslate.setDuration(Duration.millis(3000));
+//		  righttranslate.setCycleCount(TranslateTransition.INDEFINITE);
+		  righttranslate.setByX(200);
+		  //translate.setByY(-250);
+		  
+		  righttranslate.play();
+		  
+		  translate.setNode(Leftview);
+		  translate.setDuration(Duration.millis(3000));
+//		  translate.setCycleCount(TranslateTransition.INDEFINITE);
+		  translate.setByX(-200);
+		  String musicFile = "interface-welcome-131917.mp3";    
+
+		  
+		  translate.setOnFinished(new EventHandler<ActionEvent>() {
+			  
+			    @Override
+			    public void handle(ActionEvent event) {
+			        stage.close();
+			        if(Admin==0) {
+			        HomePage(U);
+			        }
+			        else if(Admin==1) {
+			        	AdminScreen(U);
+			        }
+			    }
+			});
+		  //translate.setByY(-250);
+		  
+		  translate.play();
+		  
+		}
+		public static void Signinpage(Stage applicationStage){
+			 // TODO: Implement this method
+			HBox Right = new HBox();
+			Rectangle Orange = new Rectangle();
+			Orange.setFill(BURNT);
+			Orange.setWidth(300);
+			Orange.setHeight(700);
+			
+			VBox vbox = new VBox();
+			vbox.setAlignment(Pos.CENTER_LEFT);
+			vbox.setPadding(new Insets(16));
+			Image image = new Image ("https://bit.ly/3UU1htp");
+			 ImageView  view = new ImageView(image);
+		    view.setFitHeight(600);
+		    
+		    view.setPreserveRatio(true);
+		    Image Logo = new Image("LonghornLibrary.png",true);
+		    ImageView Logoview = new ImageView(Logo);
+		    Logoview.setFitHeight(200);
+		    Logoview.setFitWidth(200);
+		    Logoview.setPreserveRatio(true);
+		    Right.getChildren().addAll(Orange,view);
+			//Username text field
+			
+			Label Username = new Label("Username:   ");
+			Username.setFont(new Font("Arial", 14));
+			 TextField User = new TextField();
+			User.setMaxWidth(200);
+			
+		    
+		    //password text field
+		    Label Password = new Label("Password:   ");
+		    Password.setFont(new Font("Arial", 14));
+		    PasswordField Pass = new PasswordField();
+		    Pass.setMaxWidth(200);
+		   
+		    applicationStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+		        @Override
+		        public void handle(WindowEvent e) {
+		         Platform.exit();
+		         System.exit(0);
+		        }
+		      });
+			
+		    //sign in button
+		    Button signin = new Button("Sign In");
+		    signin.setOnAction(new EventHandler<ActionEvent>() {
+		        @Override
+		        public void handle(ActionEvent event) {
+		        	BufferedReader input = null;
+		        	HashMap<String,String> SignIN = new HashMap<String, String>();
+		        	Client client = new Client();
+					String U = User.getText();
+					String P = Pass.getText();
+					SignIN.put(U,P);
+					
+					try {
+					      File signinfile = new File("signin.txt");
+					      if (signinfile.createNewFile()) {
+					        System.out.println("File created: " + signinfile.getName());
+					      } else {
+					        System.out.println("File already exists.");
+					      }
+					    } catch (IOException e) {
+					      System.out.println("An error occurred.");
+					      e.printStackTrace();
+					    }
+					 finally {
+						 FileOutputStream file;
+						try {
+							file = new FileOutputStream("signin.txt");
+							ObjectOutputStream output = new ObjectOutputStream(file);
+							output.writeObject(SignIN);
+							output.close();	
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						finally {
+							writer.println("Sign-in");
+							writer.flush();
+							User.requestFocus();
+							String message = null;
+							Socket sock;
+							try {
+								sock = new Socket(host, 1717);
+								 input =new BufferedReader(new
+											InputStreamReader(sock.getInputStream()));
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							try {
+								message=input.readLine();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						if(message.compareTo("AlreadyOn")==0) {
+							Stage Alreadyon = new Stage();
+							  GridPane Alreadyongrid = new GridPane();
+								Scene Alreadyonscene = new Scene(Alreadyongrid, 250, 20);
+								Label Invalid = new Label("Someone Is Already Logged In To This Account");
+								Invalid.setTextFill(Color.RED);
+								Alreadyongrid.add(Invalid,0,0);
+								Alreadyon.setScene(Alreadyonscene);
+								Alreadyon.show();
+						}
+						
+							else if(message.compareTo("Valid")==0) {
+								writer.println("IsAdmin-"+U);
+								writer.flush();
+								try {
+								sock = new Socket(host, 1717);
+								 input =new BufferedReader(new
+											InputStreamReader(sock.getInputStream()));
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							try {
+								message=input.readLine();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							if(message.contains("IsAdmin")) {
+								applicationStage.close();
+								Welcome(U,1);
+								
+							}
+							else {
+								System.out.println("Valid");	
+								applicationStage.close();
+								Welcome(U,0);
+								
+							}
+						}
+						
+						
+					
+					else if(message.compareTo("Invalid")==0) {
+						Stage InvalidPassword = new Stage();
+						  GridPane InvalidPasswordgrid = new GridPane();
+							Scene InvalidPasswordscene = new Scene(InvalidPasswordgrid, 250, 20);
+							Label Invalid = new Label("Invalid Username or Password");
+							Invalid.setTextFill(Color.RED);
+							InvalidPasswordgrid.add(Invalid,0,0);
+							InvalidPassword.setScene(InvalidPasswordscene);
+							InvalidPassword.show();
+					}
+					}
+					 }
+		        }
+			});
+		    Button signup = new Button("Sign Up");
+		    signup.setOnAction(new EventHandler<ActionEvent>() {
+		        @Override
+		        public void handle(ActionEvent event) {
+		        Stage signupStage = new Stage();
+				GridPane signupgrid = new GridPane();
+				Scene signupscene = new Scene(signupgrid, 300, 150);
+				signupStage.setScene(signupscene);
+				//Username text field
+				Label Username = new Label("Username:   ");
+				TextField User = new TextField();
+				signupgrid.add(Username,0,0);
+				signupgrid.add(User,1,0);
+			    
+				
+			    //password text field
+			    Label Password = new Label("Password:   ");
+				PasswordField Pass = new PasswordField();
+				
+				//Sign up button in the signup tab
+				Button Signup = new Button("Sign Up");
+			    Button Signin = new Button("Sign In");
+			    
+			    Signin.setOnAction(new EventHandler<ActionEvent>() {
+					 @Override
+				        public void handle(ActionEvent event) {
+						 signupStage.close();
+						 Signinpage(applicationStage);
+					 }
+			    });
+			    
+				Signup.setOnAction(new EventHandler<ActionEvent>() {
+					 @Override
+				        public void handle(ActionEvent event) {
+						 if(User.getText().length()!=0&&Pass.getText().length()!=0) {
+						 BufferedReader input = null;
+						 HashMap<String,String> SignUP = new HashMap<String, String>();
+						 SignUP.put(User.getText(),Pass.getText());
+						 try {
+						      File signupfile = new File("signup.txt");
+						      if (signupfile.createNewFile()) {
+						        System.out.println("File created: " + signupfile.getName());
+						      } else {
+						        System.out.println("File already exists.");
+						      }
+						    } catch (IOException e) {
+						      System.out.println("An error occurred.");
+						      
+						      e.printStackTrace();
+						    }
+						 finally {
+							 FileOutputStream file;
+							try {
+								file = new FileOutputStream("signup.txt");
+								ObjectOutputStream output = new ObjectOutputStream(file);
+								output.writeObject(SignUP);
+								output.close();	
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							finally {
+								writer.println("Sign-up");
+								writer.flush();
+								User.requestFocus();
+								String message = null;
+								Socket sock;
+								try {
+									sock = new Socket(host, 1717);
+									 input =new BufferedReader(new
+												InputStreamReader(sock.getInputStream()));
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+								try {
+									message=input.readLine();
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+								if(message.compareTo("Unavaliable")==0) {
+									Stage Unavaliable = new Stage();
+									  GridPane Unavaliablegrid = new GridPane();
+										Scene Unavaliablescene = new Scene(Unavaliablegrid, 250, 20);
+										Label Invalid = new Label("Username Unavaliable");
+										Invalid.setTextFill(Color.RED);
+										Unavaliablegrid.add(Invalid,0,0);
+										Unavaliable.setScene(Unavaliablescene);
+										Unavaliable.show();					
+								}
+								else if(message.compareTo("Continue")==0) {
+								Client client = new Client();
+								Welcome(User.getText(),0);
+								signupStage.close();
+								}
+								
+							}
+						 }
+						 }
+					 }
+					 
+				});
+				
+				
+				signupStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+			        @Override
+			        public void handle(WindowEvent e) {
+			         Platform.exit();
+			         System.exit(0);
+			        }
+			      });
+				signupgrid.add(Password,0,1);
+				signupgrid.add(Pass,1,1);
+				signupgrid.add(Signup,0,2);
+				signupgrid.add(Signin,0,3);
+				signupStage.getIcons().add(new Image("LonghornLibrary.png"));
+				signupStage.setTitle("Sign Up");
+				signupStage.show();
+				applicationStage.close();
+		        }
+			});
+		    
+			
+		    
+		    vbox.getChildren().addAll(Logoview,Username,User,Password,Pass,signin,signup);
+		    applicationStage.getIcons().add(new Image("LonghornLibrary.png"));
+		    applicationStage.setTitle("Longhorn Library Login");
+		    applicationStage. setResizable(false);
+			StackPane layout = new StackPane();
+			layout.getChildren().addAll(Right,vbox);
+			Scene scene = new Scene(layout, 600, 500);
+			applicationStage.setScene(scene);
+			applicationStage.show();
+		}
+public static void main(String[] args) {
+    launch(args); // Launch application
+}
+}
+
+
+
+
